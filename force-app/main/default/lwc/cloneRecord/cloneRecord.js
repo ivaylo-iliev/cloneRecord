@@ -31,7 +31,6 @@ export default class CloneRecord extends NavigationMixin(LightningElement) {
 
 	layoutDetails = [];
 	fieldList = [];
-	openSections = [];
 
 	formCanBeRendered = false;
 	showSpinner = true;
