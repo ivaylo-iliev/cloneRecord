@@ -1,15 +1,42 @@
 <template>
 	<template if:true={showSpinner}>
-
+		<lightning-spinner size="medium"></lightning-spinner>
 	</template>
 
-    <template if:true={formCanBeRendered}>
-		<lightning-record-edit-form
-						object-api-name={objectApiName}
-						record-id={recordId}
-						onsubmit={handleFormSubmit}
-						onload={handleFormLoad}
-						onsuccess={handleFormSuccess}
-		></lightning-record-edit-form>
+	<template if:true={formCanBeRendered}>
+		<lightning-record-edit-form object-api-name={objectApiName} record-id={recordId} onsubmit={handleFormSubmit}
+			onload={handleFormLoad} onsuccess={handleFormSuccess}>
+			<template for:each={layoutDetails} for:item="section">
+				<div key={section.id} class="slds-section slds-is-open">
+					<h3 class="slds-section__title slds-theme_shade">
+						<span class="slds-truncate slds-p-horizontal_small" title={section.label}>{section.label}</span>
+					</h3>
+					<div aria-hidden="false" class="slds-section__content">
+						<template for:each={section.rows} for:item="row">
+							<div key={row} class="slds-grid slds-wrap">
+								<template for:each={row} for:item="field">
+									<div key={field} class={field.cssClass}>
+										<lightning-input-field field-name={field.apiName}></lightning-input-field>
+									</div>
+								</template>
+							</div>
+						</template>
+					</div>
+				</div>
+			</template>
+			<div class="slds-docked-form-footer">
+				<div class="slds-grid slds-grid_align-center slds-gutters">
+					<div class="slds-col">
+						<lightning-button class="slds-m-top_small" type="button" label="Cancel"
+										  variant="destructive"
+										  onclick={handleCancelClick}></lightning-button>
+					</div>
+					<div class="slds-col">
+						<lightning-button class="slds-m-top_small" type="submit" variant="brand"
+										  label="Save"></lightning-button>
+					</div>
+				</div>
+			</div>
+		</lightning-record-edit-form>
 	</template>
 </template>

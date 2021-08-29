@@ -1,29 +1,57 @@
 import { LightningElement, api, wire } from 'lwc';
-import {getRecordUi} from 'lightning/uiRecordApi';
+
+import {
+	getRecordUi,
+    createRecord
+} from 'lightning/uiRecordApi';
+
 import {NavigationMixin} from 'lightning/navigation';
 import {CloseActionScreenEvent} from 'lightning/actions';
 import {ShowToastEvent} from "lightning/platformShowToastEvent";
+
+
+const DEFAULT_FIELDS_TO_REMOVE = [
+	'Id',
+	'IsDeleted',
+	'LastModifiedById',
+	'LastModifiedDate',
+	'LastReferencedDate',
+	'LastViewedDate',
+	'SystemModstamp',
+	'CreatedById',
+	'CreatedDate'
+];
 
 export default class CloneRecord extends LightningElement {
 	@api recordId;
 	@api objectApiName;
 	@api showCalculatedFields = false;
 	@api fieldsToRemove = [];
+	@api defaultFieldValues;
 
 	layoutDetails = [];
 	fieldList = [];
+	openSections = [];
 
-	formCanBeRendered = true;
-	showSpinner = false;
+	formCanBeRendered = false;
+	showSpinner = true;
 
 	@wire(getRecordUi, {recordIds: '$recordId', layoutTypes: 'Full', modes: 'Edit'})
 	getRecordUiData({error, data}){
 		if(data){
 			console.log('layout information', JSON.parse(JSON.stringify(data)));
 			this.parseFieldDetails(data);
+			this.fieldsToRemove = [...DEFAULT_FIELDS_TO_REMOVE];
+			console.log('fieldsToRemove: ', this.fieldsToRemove);
 			if(this.fieldList !== null && this.fieldList !== undefined && this.fieldList.length > 0){
 				this.parseLayoutData(data);
+				if(this.defaultFieldValues){
+					this.setDefaultValues();					
+				}
+				this.showSpinner = false;
+				this.formCanBeRendered = true;
 			}
+
 			
 		}
 
@@ -37,11 +65,28 @@ export default class CloneRecord extends LightningElement {
 	}
 
 	handleFormSubmit(event){
+		event.preventDefault();
+		this.showSpinner = true;
+		let fieldsToSubmit = event.detail.fields;
+		
+		this.fieldsToRemove.forEach( field => {
+			delete fieldsToSubmit[field];
+		});
 
+		let recordToSubmit = {
+			apiName: this.objectApiName,
+			fields: fieldsToSubmit
+		}
+
+		createRecord(recordToSubmit).then( result => {
+			console.log(JSON.parse(JSON.stringify(result)));
+		}).catch(error => {
+			
+		});
 	}
 
-	handleFormCancel(event){
-
+	handleFormCancel(){
+		this.dispatchEvent(new CloseActionScreenEvent());
 	}
 
 	parseLayoutData(data){
@@ -56,7 +101,10 @@ export default class CloneRecord extends LightningElement {
 				section.id = item.id;
 				section.label = item.heading;
 				section.columns = item.columns;
-				section.collpsible = item.collpsible;
+				if(!item.collapsible){
+					this.openSections.push(item.id);
+				}
+				section.collpsible = item.collapsible;
 				section.rows = [];
 			
 				item.layoutRows.forEach(row => {
@@ -67,7 +115,7 @@ export default class CloneRecord extends LightningElement {
 							if (layoutComponent?.apiName && this.fieldList.includes(layoutComponent.apiName)) {						
 								field = {
 									apiName: layoutComponent.apiName,
-									cssClass: `slds-size_1-of-${item.columns}`
+									cssClass: `slds-col slds-size_1-of-${item.columns}`
 								};
 								layoutRow.push(field);
 							}
@@ -80,7 +128,6 @@ export default class CloneRecord extends LightningElement {
             });
 		}
 
-		console.log('sections: ', sections);
 		this.layoutDetails = sections;
 	}
 
@@ -92,7 +139,23 @@ export default class CloneRecord extends LightningElement {
 				this.fieldList.push(value.apiName);
 			}				
 		}
+	}
 
-		console.log(this.fieldList);
+	setDefaultValues(){
+		let fieldList = this.template.querySelectorAll('lightning-input-field');
+		fieldList.forEach(field => {
+			this.defaultFieldValues.forEach(defautlValueItem => {
+				if(field.fieldName === defautlValueItem.name){
+					field.value = defaultValueItem.value;
+				}
+			});
+
+			this.fieldsToRemove.forEach(fieldToRemove => {
+				if(field.fieldName === fieldToRemove){
+					field.value = '';
+				}
+			})
+
+		});		
 	}
 }
