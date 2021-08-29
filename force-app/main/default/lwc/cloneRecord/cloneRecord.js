@@ -22,7 +22,7 @@ const DEFAULT_FIELDS_TO_REMOVE = [
 	'CreatedDate'
 ];
 
-export default class CloneRecord extends LightningElement {
+export default class CloneRecord extends NavigationMixin(LightningElement) {
 	@api recordId;
 	@api objectApiName;
 	@api showCalculatedFields = false;
@@ -60,10 +60,6 @@ export default class CloneRecord extends LightningElement {
 		}
 	}
 
-	handleFormLoad(event){
-		
-	}
-
 	handleFormSubmit(event){
 		event.preventDefault();
 		this.showSpinner = true;
@@ -79,9 +75,29 @@ export default class CloneRecord extends LightningElement {
 		}
 
 		createRecord(recordToSubmit).then( result => {
-			console.log(JSON.parse(JSON.stringify(result)));
+			const cloneResult = result;
+			const pageReference = {
+				type: 'standard__recordPage',
+				attributes: {
+					recordId: result.id,
+					actionName: 'view'
+				}
+			};
+
+			let successToast = new ShowToastEvent({
+				title: 'Service request cloned',
+				message: 'Service request {0} successfully created. ',
+				messageData: [result.CaseNumber],
+				mode: 'dismissible',
+				variant: 'success'
+			});
+
+
+			this[NavigationMixin.Navigate](pageReference);
+			this.dispatchEvent(successToast);
 		}).catch(error => {
-			
+			console.log('There was an error while saving the cloned record.');
+			console.log(error)
 		});
 	}
 

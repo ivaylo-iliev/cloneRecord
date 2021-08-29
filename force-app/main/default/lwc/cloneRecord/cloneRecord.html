@@ -4,8 +4,7 @@
 	</template>
 
 	<template if:true={formCanBeRendered}>
-		<lightning-record-edit-form object-api-name={objectApiName} record-id={recordId} onsubmit={handleFormSubmit}
-			onload={handleFormLoad} onsuccess={handleFormSuccess}>
+		<lightning-record-edit-form object-api-name={objectApiName} record-id={recordId} onsubmit={handleFormSubmit}>
 			<template for:each={layoutDetails} for:item="section">
 				<div key={section.id} class="slds-section slds-is-open">
 					<h3 class="slds-section__title slds-theme_shade">
