@@ -4,38 +4,51 @@
 	</template>
 
 	<template if:true={formCanBeRendered}>
-		<lightning-record-edit-form object-api-name={objectApiName} record-id={recordId} onsubmit={handleFormSubmit}>
-			<template for:each={layoutDetails} for:item="section">
-				<div key={section.id} class="slds-section slds-is-open">
-					<h3 class="slds-section__title slds-theme_shade">
-						<span class="slds-truncate slds-p-horizontal_small" title={section.label}>{section.label}</span>
-					</h3>
-					<div aria-hidden="false" class="slds-section__content">
-						<template for:each={section.rows} for:item="row">
-							<div key={row} class="slds-grid slds-wrap">
-								<template for:each={row} for:item="field">
-									<div key={field} class={field.cssClass}>
-										<lightning-input-field field-name={field.apiName}></lightning-input-field>
+		<!-- <lightning-quick-action-panel header={formHeader}> -->
+			
+			<div  style="max-height: 80vh; overflow-x: hidden; overflow-y: auto;">
+				<div class="slds-grid slds-grid_align-center slds-p-around_medium" style="border-bottom: 1px solid #c1c1c1;">
+					<h3 class="slds-text-heading_medium">{formHeader}</h3>
+				</div>
+				<div class="slds-p-around_medium">
+				<lightning-record-edit-form object-api-name={objectApiName} record-id={recordId}
+					onload={handleFormLoad}>
+					<template for:each={layoutDetails} for:item="section">
+						<div key={section.id} class="slds-section slds-is-open">
+							<h3 class="slds-section__title slds-theme_shade">
+								<span class="slds-truncate slds-p-horizontal_small"
+									title={section.label}>{section.label}</span>
+							</h3>
+							<div aria-hidden="false" class="slds-section__content">
+								<template for:each={section.rows} for:item="row">
+									<div key={row} class="slds-grid slds-wrap">
+										<template for:each={row} for:item="field">
+											<div key={field} class={field.cssClass}>
+												<lightning-input-field field-name={field.apiName}
+													data-id={field.apiName}></lightning-input-field>
+											</div>
+										</template>
 									</div>
 								</template>
 							</div>
-						</template>
-					</div>
-				</div>
-			</template>
-			<div class="slds-docked-form-footer">
+						</div>
+					</template>
+				</lightning-record-edit-form>
+			</div>
+			</div>
+			<div class="slds-p-around_medium" style="background-color: #f3f2f2; border-top: 1px solid #c1c1c1 ;">
 				<div class="slds-grid slds-grid_align-center slds-gutters">
 					<div class="slds-col">
-						<lightning-button class="slds-m-top_small" type="button" label="Cancel"
-										  variant="destructive"
-										  onclick={handleCancelClick}></lightning-button>
+						<lightning-button class="slds-m-top_small" type="button" label="Cancel" variant="destructive"
+							onclick={handleCancelClick}></lightning-button>
 					</div>
 					<div class="slds-col">
-						<lightning-button class="slds-m-top_small" type="submit" variant="brand"
-										  label="Save"></lightning-button>
+						<lightning-button class="slds-m-top_small" onclick={handleSubmitClick} variant="brand"
+							label="Save">
+						</lightning-button>
 					</div>
 				</div>
 			</div>
-		</lightning-record-edit-form>
+		<!-- </lightning-quick-action-panel> -->
 	</template>
 </template>

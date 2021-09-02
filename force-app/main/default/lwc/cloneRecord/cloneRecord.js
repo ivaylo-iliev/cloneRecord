@@ -8,6 +8,7 @@ import {
 import {NavigationMixin} from 'lightning/navigation';
 import {CloseActionScreenEvent} from 'lightning/actions';
 import {ShowToastEvent} from "lightning/platformShowToastEvent";
+import MailingPostalCode from '@salesforce/schema/Contact.MailingPostalCode';
 
 
 const DEFAULT_FIELDS_TO_REMOVE = [
@@ -27,13 +28,17 @@ export default class CloneRecord extends NavigationMixin(LightningElement) {
 	@api objectApiName;
 	@api showCalculatedFields = false;
 	@api fieldsToRemove = [];
-	@api defaultFieldValues;
+	@api overrideFieldValues;
+	@api formHeader;
 
 	layoutDetails = [];
 	fieldList = [];
 
 	formCanBeRendered = false;
 	showSpinner = true;
+
+	overrideFieldValuesMap = new Map();
+
 
 	@wire(getRecordUi, {recordIds: '$recordId', layoutTypes: 'Full', modes: 'Edit'})
 	getRecordUiData({error, data}){
@@ -44,9 +49,13 @@ export default class CloneRecord extends NavigationMixin(LightningElement) {
 			console.log('fieldsToRemove: ', this.fieldsToRemove);
 			if(this.fieldList !== null && this.fieldList !== undefined && this.fieldList.length > 0){
 				this.parseLayoutData(data);
-				if(this.defaultFieldValues){
-					this.setDefaultValues();					
+				
+				if(this.overrideFieldValues){
+					this.overrideFieldValues.forEach(value => {
+						this.overrideFieldValuesMap.set(value.name, value.value);
+					});
 				}
+				
 				this.showSpinner = false;
 				this.formCanBeRendered = true;
 			}
@@ -57,47 +66,6 @@ export default class CloneRecord extends NavigationMixin(LightningElement) {
 		if(error){
 
 		}
-	}
-
-	handleFormSubmit(event){
-		event.preventDefault();
-		this.showSpinner = true;
-		let fieldsToSubmit = event.detail.fields;
-		
-		this.fieldsToRemove.forEach( field => {
-			delete fieldsToSubmit[field];
-		});
-
-		let recordToSubmit = {
-			apiName: this.objectApiName,
-			fields: fieldsToSubmit
-		}
-
-		createRecord(recordToSubmit).then( result => {
-			const cloneResult = result;
-			const pageReference = {
-				type: 'standard__recordPage',
-				attributes: {
-					recordId: result.id,
-					actionName: 'view'
-				}
-			};
-
-			let successToast = new ShowToastEvent({
-				title: 'Service request cloned',
-				message: 'Service request {0} successfully created. ',
-				messageData: [result.CaseNumber],
-				mode: 'dismissible',
-				variant: 'success'
-			});
-
-
-			this[NavigationMixin.Navigate](pageReference);
-			this.dispatchEvent(successToast);
-		}).catch(error => {
-			console.log('There was an error while saving the cloned record.');
-			console.log(error)
-		});
 	}
 
 	handleFormCancel(){
@@ -112,13 +80,11 @@ export default class CloneRecord extends NavigationMixin(LightningElement) {
 
 			layoutDetails.Full.Edit.sections.forEach(item => {
 				let section = {};
-				console.log('section: ', JSON.parse(JSON.stringify(item)));
+				
 				section.id = item.id;
 				section.label = item.heading;
 				section.columns = item.columns;
-				if(!item.collapsible){
-					this.openSections.push(item.id);
-				}
+
 				section.collpsible = item.collapsible;
 				section.rows = [];
 			
@@ -127,10 +93,11 @@ export default class CloneRecord extends NavigationMixin(LightningElement) {
 				    row.layoutItems.forEach(layoutItem => {
 						let field = {};
 						layoutItem.layoutComponents.forEach(layoutComponent => {
-							if (layoutComponent?.apiName && this.fieldList.includes(layoutComponent.apiName)) {						
+							if (layoutComponent?.apiName && this.fieldList.includes(layoutComponent.apiName)) {		
+												
 								field = {
 									apiName: layoutComponent.apiName,
-									cssClass: `slds-col slds-size_1-of-${item.columns}`
+									cssClass: `slds-col slds-size_1-of-${item.columns}`,
 								};
 								layoutRow.push(field);
 							}
@@ -143,6 +110,7 @@ export default class CloneRecord extends NavigationMixin(LightningElement) {
             });
 		}
 
+		console.log('sections: ',sections);
 		this.layoutDetails = sections;
 	}
 
@@ -152,25 +120,60 @@ export default class CloneRecord extends NavigationMixin(LightningElement) {
 				this.fieldList.push(value.apiName);
 			} else if(!value.calculated){
 				this.fieldList.push(value.apiName);
-			}				
+			}
 		}
 	}
 
-	setDefaultValues(){
-		let fieldList = this.template.querySelectorAll('lightning-input-field');
-		fieldList.forEach(field => {
-			this.defaultFieldValues.forEach(defautlValueItem => {
-				if(field.fieldName === defautlValueItem.name){
-					field.value = defaultValueItem.value;
-				}
-			});
+	handleFormLoad(){
+		console.log('override');
+		const inputFields = this.template.querySelectorAll('lightning-input-field');
+		inputFields.forEach(field => {
+			field.value = this.overrideFieldValuesMap.get(field.fieldName);
+		});		
+	}
 
-			this.fieldsToRemove.forEach(fieldToRemove => {
-				if(field.fieldName === fieldToRemove){
-					field.value = '';
+	handleSubmitClick(){
+		let fields = this.template.querySelectorAll('lightning-input-field');
+		let fieldsToSubmit = {};		
+
+		if(fields){
+			fields.forEach(field => {
+				if(!this.fieldsToRemove.includes(field.fieldName) && field.value){
+					fieldsToSubmit[field.fieldName] = field.value;
 				}
 			})
+		}
 
-		});		
+		let recordToSubmit = {
+			apiName: this.objectApiName,
+			fields: fieldsToSubmit
+		}
+
+		console.log(recordToSubmit);
+
+		createRecord(recordToSubmit).then( result => {
+			const cloneResult = result;
+			const pageReference = {
+				type: 'standard__recordPage',
+				attributes: {
+					recordId: result.id,
+					actionName: 'view'
+				}
+			};
+
+			let successToast = new ShowToastEvent({
+				title: `${this.objectApiName} cloned`,
+				message: `${this.objectApiName} record has been successfully cloned.`,
+				mode: 'dismissible',
+				variant: 'success'
+			});
+
+
+			this[NavigationMixin.Navigate](pageReference);
+			this.dispatchEvent(successToast);
+		}).catch(error => {
+			console.log('There was an error while saving the cloned record.');
+			console.log(error)
+		});
 	}
 }
