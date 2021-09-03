@@ -8,8 +8,6 @@ import {
 import {NavigationMixin} from 'lightning/navigation';
 import {CloseActionScreenEvent} from 'lightning/actions';
 import {ShowToastEvent} from "lightning/platformShowToastEvent";
-import MailingPostalCode from '@salesforce/schema/Contact.MailingPostalCode';
-
 
 const DEFAULT_FIELDS_TO_REMOVE = [
 	'Id',
@@ -43,10 +41,8 @@ export default class CloneRecord extends NavigationMixin(LightningElement) {
 	@wire(getRecordUi, {recordIds: '$recordId', layoutTypes: 'Full', modes: 'Edit'})
 	getRecordUiData({error, data}){
 		if(data){
-			console.log('layout information', JSON.parse(JSON.stringify(data)));
 			this.parseFieldDetails(data);
 			this.fieldsToRemove = [...DEFAULT_FIELDS_TO_REMOVE];
-			console.log('fieldsToRemove: ', this.fieldsToRemove);
 			if(this.fieldList !== null && this.fieldList !== undefined && this.fieldList.length > 0){
 				this.parseLayoutData(data);
 				
@@ -58,18 +54,31 @@ export default class CloneRecord extends NavigationMixin(LightningElement) {
 				
 				this.showSpinner = false;
 				this.formCanBeRendered = true;
-			}
-
-			
+			}			
 		}
 
-		if(error){
+		if(error){			
+			error.body.pageErrors.forEach(err => {
+				let message = `Status code ${err.statusCode} with error ${err.message}`;
+				let errorToast = new ShowToastEvent({
+													  title: 'Layout information read failed.',
+													  message: message,
+													  messageData: [err.statisCode, err.message],
+													  mode: 'sticky',
+													  variant: 'error'
+												  });
+				this.dispatchEvent(errorToast);
+				console.log('Error reading layout information with message: ', message);
+			});
 
+			this.handleCancelClick();
 		}
 	}
 
-	handleFormCancel(){
+	handleCancelClick(){
+		const closeEvent = new CustomEvent('close');
 		this.dispatchEvent(new CloseActionScreenEvent());
+		this.dispatchEvent(closeEvent);
 	}
 
 	parseLayoutData(data){
@@ -125,7 +134,6 @@ export default class CloneRecord extends NavigationMixin(LightningElement) {
 	}
 
 	handleFormLoad(){
-		console.log('override');
 		const inputFields = this.template.querySelectorAll('lightning-input-field');
 		inputFields.forEach(field => {
 			field.value = this.overrideFieldValuesMap.get(field.fieldName);
@@ -149,14 +157,12 @@ export default class CloneRecord extends NavigationMixin(LightningElement) {
 			fields: fieldsToSubmit
 		}
 
-		console.log(recordToSubmit);
-
 		createRecord(recordToSubmit).then( result => {
 			const cloneResult = result;
 			const pageReference = {
 				type: 'standard__recordPage',
 				attributes: {
-					recordId: result.id,
+					recordId: cloneResult.id,
 					actionName: 'view'
 				}
 			};
@@ -173,7 +179,22 @@ export default class CloneRecord extends NavigationMixin(LightningElement) {
 			this.dispatchEvent(successToast);
 		}).catch(error => {
 			console.log('There was an error while saving the cloned record.');
-			console.log(error)
+			console.log('Error message: ', JSON.parse(JSON.stringify(error)));
+			
+			error.body.pageErrors.forEach(err => {
+				let message = `Status code ${err.statusCode} with error ${err.message}`;
+				let errorToast = new ShowToastEvent({
+													  title: `${this.objectApiName} cloning failed`,
+													  message: message,
+													  messageData: [err.statisCode, err.message],
+													  mode: 'sticky',
+													  variant: 'error'
+												  });
+				this.dispatchEvent(errorToast);
+				console.log('Error while cloning with message: ', message);
+			});
+
+			this.handleCancelClick();
 		});
 	}
 }

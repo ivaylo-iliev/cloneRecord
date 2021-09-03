@@ -1,0 +1,20 @@
+:host{
+	--border-color: #c1c1c1;
+	--footer-background-color: #f3f2f2;
+	--border: 1px solid var(--border-color);
+}
+
+.header-container{
+	border-bottom: var(--border);
+}
+
+.footer-container{
+	background-color: var(--footer-background-color); 
+	border-top: var(--border); 
+}
+
+.form-container{
+	max-height: 80vh; 
+	overflow-x: hidden; 
+	overflow-y: auto;
+}
